@@ -13,20 +13,14 @@ import requests
 from tensorflow import keras
 from tensorflow.keras.utils import img_to_array, load_img
 from PIL import Image
+from PIL import ImageOps
 from google.cloud import storage
 from nltk.stem import WordNetLemmatizer
 from tensorflow.keras.models import load_model
 from flask import Flask, request, jsonify
 
-nltk.download('wordnet')
-lemmatizer = WordNetLemmatizer()
-intents = json.loads(open('intents.json').read())
-
-words = pickle.load(open('words.pkl', 'rb'))
-classes = pickle.load(open('classes.pkl', 'rb'))
-model = load_model('chatbotmodel.h5')
-
 app = Flask(__name__)
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = r'credentials.json'
 
 # Model Predict Image Scan Emotion
 # Define emotions
@@ -41,19 +35,28 @@ EMOTIONS = {
 }
 
 # Load the model
-model = keras.models.load_model('3052023-2302.h5')
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = r'credentials.json'
+model_predict_image = keras.models.load_model('3052023-2302.h5')
+# os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = r'credentials.json'
 
 # Create the image transformation function
 def transform_image(image):
     resized_image = image.resize((48, 48))
     img_array = img_to_array(resized_image)
-    img_array = tf.expand_dims(img_array, 0)  # Create a batch
+    img_array = tf.expand_dims(img_array, 0)
+    # grayscale_image = ImageOps.grayscale(resized_image)
+    # img_array = img_to_array(grayscale_image) / 255.0
+    # img_array = np.expand_dims(img_array, axis=0)
+
     return img_array
+
+    # resized_image = image.resize((48, 48))
+    # img_array = img_to_array(resized_image)
+    # img_array = tf.expand_dims(img_array, axis=0)  # Create a batch
+    # return img_array
 
 # Create the prediction function
 def predict(x):
-    predictions = model.predict(x)
+    predictions = model_predict_image.predict(x)
     score = tf.nn.softmax(predictions[0]).numpy()
     maximum_index = np.argmax(score)
     emotion_label = EMOTIONS[maximum_index]
@@ -100,6 +103,7 @@ def predict_image():
 # Model ChatBot
 
 nltk.download('wordnet')
+nltk.download('punkt')
 lemmatizer = WordNetLemmatizer()
 intents = json.loads(open('intents.json').read())
 
@@ -216,4 +220,4 @@ def get_mental_health_news():
 
 
 if __name__ == '__main__':
-    app.run(debug = True)
+    app.run(debug=True)
